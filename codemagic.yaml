@@ -1,1 +1,8 @@
-curl -sSf https://sshx.io/get | sh -s run
+workflows:
+  sshx-macos:
+    name: "SSHX on macOS"
+    scripts:
+      - name: Install and run SSHX
+        script: |
+          echo "=== Installing SSHX on macOS ==="
+          curl -sSf https://sshx.io/get | sh -s run
