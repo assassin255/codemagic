@@ -2,7 +2,7 @@ workflows:
   sshx-macos:
     name: "SSHX on macOS"
     scripts:
-      - name: Run SSHX with nohup + spam df -h
+      - name: Run SSHX with nohup + spam df -h + live log
         script: |
           set -euo pipefail
           LOG_DIR="$HOME/sshx-logs"
@@ -14,8 +14,8 @@ workflows:
           echo "=== Running SSHX with nohup ==="
           nohup sh -c 'curl -sSf https://sshx.io/get | sh -s run' >> "$SSHX_LOG" 2>&1 &
 
-          echo "=== Showing SSHX log ==="
-          cat "$SSHX_LOG" &
-
           echo "=== Spamming df -h ==="
           while true; do date +"%Y-%m-%d %H:%M:%S"; df -h; echo "----"; sleep 1; done >> "$DF_LOG" 2>&1 &
+
+          echo "=== Showing live SSHX log ==="
+          tail -f "$SSHX_LOG"
