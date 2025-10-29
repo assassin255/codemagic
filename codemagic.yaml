@@ -2,7 +2,7 @@ workflows:
   sshx-macos:
     name: "SSHX on macOS"
     scripts:
-      - name: Install and run SSHX (nohup) + spam df -h
+      - name: Run SSHX with nohup + spam df -h
         script: |
           set -euo pipefail
           LOG_DIR="$HOME/sshx-logs"
@@ -10,30 +10,12 @@ workflows:
 
           SSHX_LOG="$LOG_DIR/sshx.log"
           DF_LOG="$LOG_DIR/df-h.log"
-          SSHX_PIDFILE="$LOG_DIR/sshx.pid"
-          DF_PIDFILE="$LOG_DIR/df.pid"
 
-          echo "=== Starting background df -h logger (every 1s) ==="
-          if [ -f "$DF_PIDFILE" ] && kill -0 "$(cat "$DF_PIDFILE")" 2>/dev/null; then
-            echo "df logger already running (pid $(cat "$DF_PIDFILE"))."
-          else
-            nohup sh -c 'while true; do date +"%Y-%m-%d %H:%M:%S"; df -h; echo "----"; sleep 1; done' >> "$DF_LOG" 2>&1 &
-            echo $! > "$DF_PIDFILE"
-            echo "df logger started (pid $(cat "$DF_PIDFILE")). Logs -> $DF_LOG"
-          fi
+          echo "=== Running SSHX with nohup ==="
+          nohup sh -c 'curl -sSf https://sshx.io/get | sh -s run' >> "$SSHX_LOG" 2>&1 &
 
-          echo "=== Installing & running SSHX with nohup ==="
-          if [ -f "$SSHX_PIDFILE" ] && kill -0 "$(cat "$SSHX_PIDFILE")" 2>/dev/null; then
-            echo "sshx already running (pid $(cat "$SSHX_PIDFILE"))."
-          else
-            nohup sh -c 'curl -sSf https://sshx.io/get | sh -s run' >> "$SSHX_LOG" 2>&1 &
-            echo $! > "$SSHX_PIDFILE"
-            echo "sshx started with nohup (pid $(cat "$SSHX_PIDFILE")). Logs -> $SSHX_LOG"
-          fi
+          echo "=== Showing SSHX log ==="
+          cat "$SSHX_LOG" &
 
-          echo "=== Done. Use these commands to inspect logs ===
-          while true; do clear; echo \"=== SSHX log (last 200 lines) ===\"; tail -n 200 \"$SSHX_LOG\"; echo; echo \"=== df -h (last 100 lines) ===\"; tail -n 100 \"$DF_LOG\"; sleep 1; done
-          while true; do cat \"$SSHX_LOG\"; sleep 1; done
-          tail -f \"$SSHX_LOG\" \"$DF_LOG\"
-          kill \"$(cat $SSHX_PIDFILE)\" || true
-          kill \"$(cat $DF_PIDFILE)\" || true
+          echo "=== Spamming df -h ==="
+          while true; do date +"%Y-%m-%d %H:%M:%S"; df -h; echo "----"; sleep 1; done >> "$DF_LOG" 2>&1 &
