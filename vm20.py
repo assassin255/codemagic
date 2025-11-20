@@ -14,46 +14,43 @@ def check_qemu():
     return subprocess.run("command -v qemu-system-x86_64", shell=True).returncode == 0
 
 # =====================
-# ASK BUILD QEMU
+# BUILD QEMU
 # =====================
 choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source không? (y/n): ", "n")
-
 if choice == "y":
     if check_qemu():
         print("⚡ QEMU đã cài sẵn, bỏ qua build.")
     else:
-        print("🚀 Build QEMU 10.1.2 + VM Optimized ")
-        build_cmd = """
-sudo apt update -y && sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv \
-libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev \
-libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev \
-libspice-server-dev libspice-protocol-dev llvm-15 llvm-15-dev llvm-15-tools aria2 && \
-export PATH="/usr/lib/llvm-15/bin:$PATH" && \
-python3 -m venv ~/qemu-env && source ~/qemu-env/bin/activate && \
-pip install --upgrade pip tomli markdown packaging && \
-rm -rf /tmp/qemu-src && git clone https://gitlab.com/qemu-project/qemu.git /tmp/qemu-src && \
-cd /tmp/qemu-src && git checkout v10.1.2 && mkdir -p build && cd build && \
-export CC=clang-15 CXX=clang++-15 LD=lld-15 && \
-export CFLAGS="-O3 -march=native -mtune=native -pipe -flto -fomit-frame-pointer \
--fno-exceptions -fno-rtti -fvisibility=hidden -fno-stack-protector -mllvm -polly" && \
-export CXXFLAGS="$CFLAGS" && export LDFLAGS="-flto -fuse-ld=lld" && \
-../configure --target-list=x86_64-softmmu \
---enable-tcg \
---enable-slirp \
---enable-gtk \
---enable-sdl \
---enable-spice \
---enable-plugins \
---enable-lto \
---enable-coroutine-pool \
---disable-werror \
---disable-debug-info \
---disable-malloc-trim && \
-make -j$(nproc) && sudo make install && cd ~ && rm -rf /tmp/qemu-src && deactivate && \
-echo '✅ QEMU 10.1.2 built with LLVM 15 full LTO + Polly safe optimizations!' && \
-qemu-system-x86_64 --version
-        """
-        run(build_cmd)
+        print("🚀 Build QEMU 10.1.2 + VM Optimized")
+        build_cmds = [
+            "sudo apt update -y",
+            "sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv "
+            "libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev "
+            "libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev "
+            "libspice-server-dev libspice-protocol-dev llvm-15 llvm-15-dev llvm-15-tools aria2",
+            "python3 -m venv ~/qemu-env",
+            ". ~/qemu-env/bin/activate && pip install --upgrade pip tomli markdown packaging",
+            "rm -rf /tmp/qemu-src",
+            "git clone https://gitlab.com/qemu-project/qemu.git /tmp/qemu-src",
+            "cd /tmp/qemu-src && git checkout v10.1.2 && mkdir -p build && cd build",
+            "export CC=clang-15 CXX=clang++-15 LD=lld-15",
+            ("export CFLAGS='-O3 -march=native -mtune=native -pipe -flto -fomit-frame-pointer "
+             "-fno-exceptions -fno-rtti -fvisibility=hidden -fno-stack-protector -mllvm -polly'"),
+            "export CXXFLAGS=\"$CFLAGS\"",
+            "export LDFLAGS='-flto -fuse-ld=lld'",
+            ("../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk "
+             "--enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool "
+             "--disable-werror --disable-debug-info --disable-malloc-trim"),
+            "make -j$(nproc)",
+            "sudo make install",
+            "cd ~",
+            "rm -rf /tmp/qemu-src",
+            "deactivate",
+            "qemu-system-x86_64 --version"
+        ]
+        # Chạy từng lệnh qua bash
+        for cmd in build_cmds:
+            run(f"bash -c '{cmd}'")
 else:
     print("⚡ Bỏ qua build QEMU.")
 
@@ -106,10 +103,9 @@ cpu_core = input("⚙ CPU core (default 2): ").strip() or "2"
 ram_size = input("💾 RAM GB (default 4): ").strip() or "4"
 
 # =====================
-# START VM (IDE Disk)
+# START VM (VirtIO Disk)
 # =====================
-print("💻 Khởi động VM với IDE disk...")
-
+print("💻 Khởi động VM với VirtIO disk...")
 start_cmd = f"""qemu-system-x86_64 \
   -machine type=q35 \
   -cpu {CPU_MODEL} \
@@ -117,7 +113,7 @@ start_cmd = f"""qemu-system-x86_64 \
   -m {ram_size}G \
   -accel tcg,thread=multi,tb-size=8192,split-wx=off \
   -object iothread,id=io1 \
-  -drive file=win.img,if=none,id=drive0,cache=unsafe,aio=threads,discard=on,format=raw \
+  -drive file=win.img,if=none,id=drive0,format=raw,cache=unsafe,aio=threads,discard=on \
   -device ide-hd,drive=drive0,bus=ide.0 \
   -vga virtio \
   -device qemu-xhci,id=xhci \
