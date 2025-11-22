@@ -1,5 +1,6 @@
 services:
   winvnc:
+    image: dockurr/windows:latest
     container_name: winvnc
     environment:
       RAM_SIZE: "4G"
@@ -8,11 +9,12 @@ services:
       KVM: "N"
       VNC_PORT: "5900"
       VNC_PASSWORD: "1234"
-      DISK_FILE: "/data/win.img"   # dùng disk.img sẵn có
+      VERSION: "2012"              # Windows Server 2012
+      DISK_FILE: "/data/win.img"   # dùng disk.img đã tải
     ports:
       - "5900:5900"
     volumes:
-      - ./data:/data   # ./data chứa win.img
+      - ./data:/data
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
