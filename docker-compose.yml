@@ -1,6 +1,5 @@
 services:
   winvnc:
-    image: dockurr/windows:latest   # hoặc image custom mày đã build
     container_name: winvnc
     environment:
       RAM_SIZE: "4G"
