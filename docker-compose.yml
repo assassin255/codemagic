@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   winvnc:
-    image: dockurr/windows:2022   # thay latest bằng 2022
+    image: dockurr/windows:latest
     container_name: winvnc
     environment:
       RAM_SIZE: "4G"
@@ -11,6 +11,7 @@ services:
       KVM: "N"
       VNC_PORT: "5900"
       VNC_PASSWORD: "1234"
+      VERSION: "2022"   # <-- chọn Windows Server 2022
     ports:
       - "5900:5900"
     volumes:
