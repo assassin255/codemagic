@@ -11,7 +11,15 @@ services:
     ports:
       - "5900:5900"
     volumes:
-      - ./data:/data
+      - winvnc-data:/data
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+
+volumes:
+  winvnc-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/winvnc-data   # chứa file disk 10GB
