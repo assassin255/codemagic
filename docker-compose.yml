@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   winvnc:
-    image: dockurr/windows:latest
+    image: dockurr/windows:2022   # thay latest bằng 2022
     container_name: winvnc
     environment:
       RAM_SIZE: "4G"
