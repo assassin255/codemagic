@@ -5,12 +5,11 @@ services:
     environment:
       RAM_SIZE: "4G"
       CPU_CORES: "2"
-      DISK_SIZE: "10G"
       KVM: "N"
       VNC_PORT: "5900"
       VNC_PASSWORD: "1234"
-      VERSION: "2012"              # Windows Server 2012
-      DISK_FILE: "/data/win.img"   # dùng disk.img đã tải
+      VERSION: "2012"
+      DISK_FILE: "/data/win.img"
     ports:
       - "5900:5900"
     volumes:
