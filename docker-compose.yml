@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   winvnc:
     image: dockurr/windows:latest
@@ -5,21 +7,14 @@ services:
     environment:
       RAM_SIZE: "4G"
       CPU_CORES: "2"
+      DISK_SIZE: "10G"
       KVM: "N"
       VNC_PORT: "5900"
       VNC_PASSWORD: "1234"
     ports:
       - "5900:5900"
     volumes:
-      - winvnc-data:/data
+      - ./data:/data
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
-
-volumes:
-  winvnc-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./winvnc-data   # folder project, chắc chắn tồn tại
