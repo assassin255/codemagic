@@ -47,7 +47,7 @@ if choice == "y":
             "export CXX=clang++-15; "
             "export LD=lld-15; "
             "export COMMON='-O3 -march=native -mtune=native -pipe -flto -funroll-loops -fomit-frame-pointer "
-            "-fno-semantic-interposition -fstrict-aliasing -mllvm -polly "
+            "-fno-semantic-interposition -mllvm -polly "
             "-mllvm -polly-vectorizer=stripmine'; "
         )
 
