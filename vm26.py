@@ -4,9 +4,8 @@ import subprocess
 import time
 
 # ============================
-# Helper functions
+# Helper functions1
 # ============================
-
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -15,10 +14,9 @@ def ask(prompt, default="n"):
     return ans.lower() if ans else default.lower()
 
 # ============================
-# BUILD QEMU 10.1.2 WITH PGO + BOLT
+# BUILD QEMU 10.1.2 WITH PGO + ADVANCED BOLT
 # ============================
-
-choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source với PGO + BOLT không? (y/n): ", "n")
+choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source với PGO + BOLT nâng cao không? (y/n): ", "n")
 
 if choice == "y":
     if subprocess.run("command -v qemu-system-x86_64", shell=True).returncode == 0:
@@ -29,7 +27,7 @@ if choice == "y":
         run("sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv "
             "libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev "
             "libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev "
-            "libspice-server-dev libspice-protocol-dev llvm-15 llvm-15-dev llvm-15-tools aria2")
+            "libspice-server-dev libspice-protocol-dev llvm-15 llvm-15-dev llvm-15-tools aria2 perf")
         os.environ["PATH"] = "/usr/lib/llvm-15/bin:" + os.environ["PATH"]
 
         # python venv
@@ -49,12 +47,12 @@ if choice == "y":
             "export COMMON='-O3 -march=native -mtune=native -pipe -flto -fomit-frame-pointer -fno-semantic-interposition'; "
         )
 
-        # STAGE A: generate profile
+        # STAGE A: generate PGO profile
         run(env_base + "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim")
         run("make -j$(nproc)")
         run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
-        # STAGE B: run workload
+        # STAGE B: run workload to generate profile
         os.environ["PATH"] = "/tmp/qemu-pgo-install/usr/local/bin:" + os.environ["PATH"]
         workload_cmds = [
             "qemu-system-x86_64 --version",
@@ -70,16 +68,31 @@ if choice == "y":
             if profraws:
                 run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
-        # STAGE C: rebuild with profile
+        # STAGE C: rebuild with PGO profile
         os.chdir("/tmp/qemu-src/build")
         run(env_base + "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; make -j$(nproc) clean; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim; make -j$(nproc)")
         run("sudo make install")
 
-        # STAGE D: BOLT post-link
+        # STAGE D: BOLT post-link nâng cao với perf và flags mở rộng
         qemu_bin = subprocess.getoutput("command -v qemu-system-x86_64").strip()
         if qemu_bin and subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
             run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
-            run(f"sudo llvm-bolt {qemu_bin}.orig -o {qemu_bin}.bolt --reorder-blocks=cache+ --reorder-functions=hot --split-functions --data-refs --dedup-strings --symbolic")
+            
+            # 1️⃣ Perf profile runtime (có thể thay workload khác nặng hơn)
+            run(f"sudo perf record -e cycles:u -a -- {qemu_bin} --version")
+            
+            # 2️⃣ BOLT nâng cao với perf và flags mới
+            run(f"sudo llvm-bolt {qemu_bin}.orig -o {qemu_bin}.bolt "
+                "--reorder-blocks=cache+ "
+                "--reorder-blocks=ext-tsp "
+                "--reorder-functions=hot "
+                "--split-functions "
+                "--split-eh "
+                "--data-refs "
+                "--dedup-strings "
+                "--symbolic "
+                "-prof=perf.data")
+            
             run(f"sudo mv -f {qemu_bin}.bolt {qemu_bin}")
 
         # cleanup
@@ -87,11 +100,9 @@ if choice == "y":
         run("deactivate || true")
         run("qemu-system-x86_64 --version")
 
-
 # ============================
 # CHỌN WINDOWS
 # ============================
-
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI 💻")
 print("=====================\n")
@@ -137,7 +148,6 @@ ram_size = input("💾 RAM GB (default 4): ").strip() or "4"
 # START VM
 # ============================
 print("\n💻 Khởi động VM...")
-
 start_cmd = f"""qemu-system-x86_64 \
 -machine type=q35 \
 -cpu {cpu_model} \
