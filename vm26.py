@@ -4,9 +4,8 @@ import subprocess
 import time
 
 # ============================
-# Helper functions
+# Helper functions0
 # ============================
-
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -15,9 +14,8 @@ def ask(prompt, default="n"):
     return ans.lower() if ans else default.lower()
 
 # ============================
-# BUILD QEMU 10.1.2 WITH PGO + BOLT
+# BUILD QEMU 10.1.2 WITH PGO + BOLT (LLVM15)
 # ============================
-
 choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source với PGO + BOLT không? (y/n): ", "n")
 
 if choice == "y":
@@ -26,7 +24,7 @@ if choice == "y":
     else:
         # install llvm15 + tools
         run("sudo apt update -y")
-        run("sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv "
+        run("sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv python3-pip "
             "libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev "
             "libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev "
             "libspice-server-dev libspice-protocol-dev llvm-15 llvm-15-dev llvm-15-tools aria2")
@@ -91,7 +89,6 @@ if choice == "y":
 # ============================
 # CHỌN WINDOWS
 # ============================
-
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI 💻")
 print("=====================\n")
@@ -137,7 +134,6 @@ ram_size = input("💾 RAM GB (default 4): ").strip() or "4"
 # START VM
 # ============================
 print("\n💻 Khởi động VM...")
-
 start_cmd = f"""qemu-system-x86_64 \
 -machine type=q35 \
 -cpu {cpu_model} \
@@ -181,4 +177,3 @@ if use_rdp == "y":
     print("⏳ Đợi 3–5 phút rồi đăng nhập VM")
 else:
     print("❌ Bỏ qua tunnel RDP.")
-    
