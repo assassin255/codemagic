@@ -53,7 +53,7 @@ if choice == "y":
         )
 
         # STAGE A: generate profile
-        run(env_base + "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data -mllvm -polly -mllvm -polly-vectorizer=stripmine\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim")
+        run(env_base + "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim")
         run("make -j$(nproc)")
         run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
@@ -75,7 +75,7 @@ if choice == "y":
 
         # STAGE C: rebuild with profile
         os.chdir("/tmp/qemu-src/build")
-        run(env_base + "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction -mllvm -polly -mllvm -polly-vectorizer=stripmine\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; make -j$(nproc) clean; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim; make -j$(nproc)")
+        run(env_base + "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction\"; export CXXFLAGS=\"$CFLAGS\"; export LDFLAGS='-flto -Wl,-O3'; make -j$(nproc) clean; ../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim; make -j$(nproc)")
         run("sudo make install")
 
         # STAGE D: BOLT post-link
