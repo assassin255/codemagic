@@ -14,9 +14,8 @@ def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
 
-
 # ============================
-# BUILD QEMU WITH PGO + BOLT
+# BUILD QEMU 10.1.2 WITH PGO + BOLT
 # ============================
 
 choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source với PGO + BOLT không? (y/n): ", "n")
@@ -87,3 +86,98 @@ if choice == "y":
         run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
         run("deactivate || true")
         run("qemu-system-x86_64 --version")
+
+
+# ============================
+# CHỌN WINDOWS
+# ============================
+
+print("\n=====================")
+print("    CHỌN WINDOWS MUỐN TẢI 💻")
+print("=====================\n")
+print("1️⃣ Windows Server 2012 R2")
+print("2️⃣ Windows Server 2016")
+print("3️⃣ Windows Server 2022")
+win_choice = input("👉 Nhập số [1-3]: ").strip()
+urls = {
+    "1": ("Windows2012", "https://drive.muavps.net/file/Windows2012.img"),
+    "2": ("Windows2016", "https://drive.muavps.net/file/Windows2016.img"),
+    "3": ("Windows2022", "https://drive.muavps.net/file/Windows2022.img")
+}
+WIN_NAME, WIN_URL = urls.get(win_choice, urls["1"])
+print(f"💾 File VM: {WIN_NAME}")
+
+# ============================
+# DOWNLOAD
+# ============================
+if os.path.exists("win.img"):
+    print("✔ win.img đã tồn tại — skip tải.")
+else:
+    print("⬇ Tải bằng aria2c...")
+    run(f'aria2c -x16 -s16 --continue --file-allocation=none "{WIN_URL}" -o win.img')
+
+# ============================
+# RESIZE
+# ============================
+extra_gb = input("📦 Mở rộng đĩa thêm bao nhiêu GB (default 20)? ").strip() or "20"
+run(f"qemu-img resize win.img +{extra_gb}G")
+print(f"🔧 Đĩa đã mở rộng {extra_gb} GB.")
+
+# ============================
+# DETECT CPU HOST
+# ============================
+cpu_host = subprocess.getoutput("grep -m1 'model name' /proc/cpuinfo | sed 's/^.*: //'").strip()
+print(f"🧠 CPU host detected: {cpu_host}")
+cpu_model = f'max,model-id="{cpu_host}"'
+
+cpu_core = input("⚙ CPU core (default 2): ").strip() or "2"
+ram_size = input("💾 RAM GB (default 4): ").strip() or "4"
+
+# ============================
+# START VM
+# ============================
+print("\n💻 Khởi động VM...")
+
+start_cmd = f"""qemu-system-x86_64 \
+-machine type=q35 \
+-cpu {cpu_model} \
+-smp {cpu_core} \
+-m {ram_size}G \
+-accel tcg,thread=multi,tb-size=8192,split-wx=off \
+-object iothread,id=io1 \
+-drive file=win.img,if=none,id=drive0,cache=unsafe,aio=threads,discard=on,format=raw \
+-device ide-hd,drive=drive0,bus=ide.0 \
+-vga virtio \
+-device qemu-xhci,id=xhci \
+-device usb-tablet,bus=xhci.0 \
+-device usb-kbd,bus=xhci.0 \
+-netdev user,id=n0,hostfwd=tcp::3389-:3389 \
+-device virtio-net-pci,netdev=n0 \
+-display vnc=:0 \
+-boot order=c,menu=on \
+-name "{WIN_NAME} VM" \
+-daemonize \
+> /dev/null 2>&1
+"""
+run(start_cmd)
+time.sleep(3)
+
+# ============================
+# RDP Tunnel
+# ============================
+use_rdp = ask("🛰️ Có muốn dùng RDP để kết nối đến VM không? (y/n): ", "n")
+if use_rdp == "y":
+    run("wget -q https://github.com/kami2k1/tunnel/releases/latest/download/kami-tunnel-linux-amd64.tar.gz")
+    run("tar -xzf kami-tunnel-linux-amd64.tar.gz")
+    run("chmod +x kami-tunnel")
+    run("sudo apt install -y tmux")
+    run("tmux kill-session -t kami 2>/dev/null || true")
+    run("tmux new-session -d -s kami './kami-tunnel 3389'")
+    time.sleep(2)
+    PUBLIC = subprocess.getoutput("tmux capture-pane -pt kami | grep 'Public:' | head -n 1 | awk '{print $2}'")
+    print("\n📡 Public IP:", PUBLIC)
+    print("💻 Username: administrator")
+    print("🔑 Password: Datnguyentv.com")
+    print("⏳ Đợi 3–5 phút rồi đăng nhập VM")
+else:
+    print("❌ Bỏ qua tunnel RDP.")
