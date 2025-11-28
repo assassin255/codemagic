@@ -116,4 +116,3 @@ if choice == "y":
         # cleanup
         run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
         run("deactivate || true")
-          run("qemu-system-x86_64 --version")
