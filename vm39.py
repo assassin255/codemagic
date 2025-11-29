@@ -10,7 +10,7 @@ def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
 
-# ========== Build QEMU ==========
+print("\n========== Build QEMU ==========")
 choice = ask("👉 Build QEMU 10.1.2 với PGO + BOLT + POLLY + FULL LTO không? (y/n): ", "n")
 
 if choice == "y":
@@ -43,7 +43,6 @@ if choice == "y":
         "'; "
     )
 
-    # -------- PGO GENERATE --------
     run(
         env_base +
         "export CFLAGS=\"$COMMON -fno-pie -fno-pic "
@@ -62,7 +61,6 @@ if choice == "y":
     run("make -j$(nproc)")
     run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
-    # -------- Merge PGO Data --------
     profdir = "/tmp/qemu-pgo-data"
     if os.path.isdir(profdir):
         profraws = " ".join(
@@ -72,7 +70,6 @@ if choice == "y":
         if profraws:
             run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
-    # -------- PGO USE --------
     os.chdir("/tmp/qemu-src/build")
     run(
         env_base +
@@ -93,7 +90,6 @@ if choice == "y":
     run("make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-pgo")
 
-    # -------- BOLT Optimize --------
     qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
     if os.path.exists(qemu_bin) and subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
         run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
@@ -108,7 +104,8 @@ if choice == "y":
     run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
     run("qemu-system-x86_64 --version")
 
-# ========== Download & Run VM ==========
+print("\n========== Download & Run VM ==========")
+
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI")
 print("=====================\n")
@@ -158,13 +155,12 @@ start_cmd = f"""qemu-system-x86_64 \
 -name '{WIN_NAME} VM' \
 -daemonize
 """
-
 run(start_cmd)
 time.sleep(3)
 
 use_rdp = ask("🛰️ Dùng RDP tunnel? (y/n): ", "n")
 if use_rdp == "y":
-    run("aria2c -x 16 -s 16 -k 1M https://github.com/kami2k1/tunnel/releases/latest/download/kami-tunnel-linux-amd64.tar.gz")
+    run("wget https://github.com/kami2k1/tunnel/releases/latest/download/kami-tunnel-linux-amd64.tar.gz")
     run("tar -xzf kami-tunnel-linux-amd64.tar.gz")
     run("chmod +x kami-tunnel")
     run("sudo apt install -y tmux")
