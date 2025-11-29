@@ -10,8 +10,7 @@ def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
 
-# ========== Build QEMU ==========
-
+# ========== Build QEMU ==========1
 choice = ask("👉 Build QEMU 10.1.2 với PGO + BOLT + POLLY + FULL LTO không? (y/n): ", "n")
 
 if choice == "y":
@@ -22,7 +21,6 @@ if choice == "y":
         "llvm-15 llvm-15-dev llvm-15-tools aria2")
 
     os.environ["PATH"] = "/usr/lib/llvm-15/bin:" + os.environ["PATH"]
-
     run("python3 -m venv ~/qemu-env")
     run("bash -c 'source ~/qemu-env/bin/activate && pip install --upgrade pip tomli markdown packaging'")
 
@@ -58,7 +56,6 @@ if choice == "y":
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
         "--disable-debug-info --disable-malloc-trim "
-        "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
@@ -90,7 +87,6 @@ if choice == "y":
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
         "--disable-debug-info --disable-malloc-trim "
-        "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
