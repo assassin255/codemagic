@@ -2,13 +2,15 @@
 import os
 import subprocess
 import time
-
+#1
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
 def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
+
+# ========== Build QEMU ==========
 
 choice = ask("👉 Build QEMU 10.1.2 với PGO + BOLT + POLLY + FULL LTO không? (y/n): ", "n")
 
@@ -26,7 +28,6 @@ if choice == "y":
 
     run("rm -rf /tmp/qemu-src")
     run("git clone --depth 1 --branch v10.1.2 https://gitlab.com/qemu-project/qemu.git /tmp/qemu-src")
-
     os.makedirs("/tmp/qemu-src/build", exist_ok=True)
     os.chdir("/tmp/qemu-src/build")
 
@@ -44,7 +45,7 @@ if choice == "y":
         "'; "
     )
 
-    # BUILD PGO GENERATE
+    # -------- PGO GENERATE --------
     run(
         env_base +
         "export CFLAGS=\"$COMMON -fno-pie -fno-pic "
@@ -56,15 +57,15 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--disable-debug --disable-debug-info --disable-malloc-trim "
+        "--disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
-
     run("make -j$(nproc)")
     run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
+    # -------- Merge PGO Data --------
     profdir = "/tmp/qemu-pgo-data"
     if os.path.isdir(profdir):
         profraws = " ".join(
@@ -74,7 +75,7 @@ if choice == "y":
         if profraws:
             run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
-    # BUILD PGO USE
+    # -------- PGO USE --------
     os.chdir("/tmp/qemu-src/build")
     run(
         env_base +
@@ -88,15 +89,15 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--disable-debug --disable-debug-info --disable-malloc-trim "
+        "--disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
-
     run("make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-pgo")
 
+    # -------- BOLT Optimize --------
     qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
     if os.path.exists(qemu_bin) and subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
         run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
@@ -109,10 +110,9 @@ if choice == "y":
         run(f"sudo mv -f {qemu_bin}.bolt {qemu_bin}")
 
     run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
-
     run("qemu-system-x86_64 --version")
 
-# DOWNLOAD & RUN VM
+# ========== Download & Run VM ==========
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI")
 print("=====================\n")
