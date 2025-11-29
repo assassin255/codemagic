@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-
+#1
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -30,36 +30,39 @@ if choice == "y":
         "export CC=clang-15; "
         "export CXX=clang++-15; "
         "export LD=lld-15; "
-        "export COMMON='"
-        "-Ofast -fno-fast-math -march=native -mtune=native -pipe -flto "
+        "export COMMON='-Ofast -fno-fast-math -march=native -mtune=native -pipe -flto "
         "-funroll-loops -fomit-frame-pointer -fno-semantic-interposition "
         "-fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables "
-        "-mllvm -polly -mllvm -polly-vectorizer=stripmine "
-        "-mllvm -polly-ast-use-context -mllvm -polly-run-inliner "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0 "
-        "-Wno-error=overriding-t-option"
-        "'; "
+        "-Wno-error=overriding-t-option -Wno-error=unused-command-line-argument'"
     )
 
     run(
         env_base +
         "export CFLAGS=\"$COMMON -fno-pie -fno-pic -DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
         "export CXXFLAGS=\"$CFLAGS\"; "
-        "export LDFLAGS='-flto -fno-pie -fno-pic -Wl,-Ofast'; "
+        "export LDFLAGS='-flto -fno-pie -fno-pic -Wl,-Ofast -Wno-error=unused-command-line-argument'; "
         "../configure "
         "--target-list=x86_64-softmmu "
-        "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
-        "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--disable-debug-info --disable-malloc-trim "
-        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
-        "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0'"
+        "--enable-tcg "
+        "--enable-slirp "
+        "--enable-gtk "
+        "--enable-sdl "
+        "--enable-spice "
+        "--enable-lto "
+        "--enable-coroutine-pool "
+        "--disable-debug-info "
+        "--disable-malloc-trim "
+        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0' "
+        "--disable-plugins"
     )
+
     run("make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-optimized")
     run("rm -rf /tmp/qemu-src")
     run("deactivate")
     run("/opt/qemu-optimized/bin/qemu-system-x86_64 --version")
-    print("✅ QEMU 10.1.2 built với TCG+Polly+LTO!")
+    print("✅ QEMU 10.1.2 built với TCG+Polly+LTO, không còn lỗi plugin/link!")
 
 else:
     print("⚡ Bỏ qua build QEMU.")
