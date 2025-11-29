@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-#1
+
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -11,7 +11,7 @@ def ask(prompt, default="n"):
     return ans.lower() if ans else default.lower()
 
 print("\n========== Build QEMU ==========")
-choice = ask("👉 Bạn có muốn build QEMU 10.1.2 với TCG+Polly+LTO tối ưu không? (y/n): ", "n")
+choice = ask("👉 Bạn có muốn build QEMU 10.1.2 với TCG+Polly+LTO + fast-math không FENV? (y/n): ", "n")
 
 if choice == "y":
     run("sudo apt update -y && sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv python3-pip "
@@ -30,19 +30,18 @@ if choice == "y":
         "export CC=clang-15; "
         "export CXX=clang++-15; "
         "export LD=lld-15; "
-        "export COMMON='-Ofast -fno-fast-math -march=native -mtune=native -pipe -flto "
-        "-funroll-loops -fomit-frame-pointer -fno-semantic-interposition "
-        "-fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables "
-        "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0 "
-        "-Wno-error=overriding-t-option -Wno-error=unused-command-line-argument'"
+        "export COMMON='-Ofast -ffast-math -funroll-loops -fomit-frame-pointer -flto "
+        "-fno-semantic-interposition -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables "
+        "-march=native -mtune=native -pipe -Wno-error -Wno-unused-command-line-argument -Wno-overriding-t-option'"
     )
 
     run(
         env_base +
-        "export CFLAGS=\"$COMMON -fno-pie -fno-pic -DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
-        "export CXXFLAGS=\"$CFLAGS\"; "
-        "export LDFLAGS='-flto -fno-pie -fno-pic -Wl,-Ofast -Wno-error=unused-command-line-argument'; "
-        "../configure "
+        " && export CFLAGS=\"$COMMON -fno-pie -fno-pic -DDEFAULT_TCG_TB_SIZE=32768 "
+        "-DTCG_TARGET_HAS_MEMORY_BARRIER=0 -DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0\""
+        " && export CXXFLAGS=\"$CFLAGS\""
+        " && export LDFLAGS='-flto -fno-pie -fno-pic -Wl,-Ofast'"
+        " && ../configure "
         "--target-list=x86_64-softmmu "
         "--enable-tcg "
         "--enable-slirp "
@@ -53,7 +52,6 @@ if choice == "y":
         "--enable-coroutine-pool "
         "--disable-debug-info "
         "--disable-malloc-trim "
-        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0' "
         "--disable-plugins"
     )
 
@@ -62,7 +60,7 @@ if choice == "y":
     run("rm -rf /tmp/qemu-src")
     run("deactivate")
     run("/opt/qemu-optimized/bin/qemu-system-x86_64 --version")
-    print("✅ QEMU 10.1.2 built với TCG+Polly+LTO, không còn lỗi plugin/link!")
+    print("✅ QEMU 10.1.2 built với TCG+Polly+LTO + fast-math, bỏ FENV hoàn toàn!")
 
 else:
     print("⚡ Bỏ qua build QEMU.")
@@ -92,7 +90,7 @@ else:
     run(f'aria2c -x16 -s16 --continue --file-allocation=none "{WIN_URL}" -o win.img')
 
 extra_gb = input("📦 Mở rộng đĩa thêm bao nhiêu GB (default 20)? ").strip() or "20"
-run(f"qemu-img resize win.img +{extra_gb}G")
+run(f"/opt/qemu-optimized/bin/qemu-img resize win.img +{extra_gb}G")
 print(f"🔧 Đĩa đã mở rộng {extra_gb} GB.")
 
 cpu_host = subprocess.getoutput("grep -m1 'model name' /proc/cpuinfo | sed 's/^.*: //'").strip()
@@ -106,7 +104,7 @@ start_cmd = f"""/opt/qemu-optimized/bin/qemu-system-x86_64 \
 -cpu max,model-id='{cpu_host}' \
 -smp {cpu_core} \
 -m {ram_size}G \
--accel tcg,thread=multi,tb-size=16384,split-wx=off \
+-accel tcg,thread=multi,tb-size=32768,split-wx=off \
 -object iothread,id=io1 \
 -drive file=win.img,if=none,id=drive0,cache=writeback,aio=threads,discard=on,format=raw \
 -device virtio-blk-pci,drive=drive0,iothread=io1 \
