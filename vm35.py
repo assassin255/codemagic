@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-
+#1
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -36,8 +36,7 @@ if choice == "y":
         "-fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables "
         "-fstrict-aliasing -falign-functions=32 -falign-jumps=32 -falign-loops=32 "
         "-mllvm -polly -mllvm -polly-ast-use-context -mllvm -polly-vectorizer=stripmine "
-        "-mllvm -polly-opt-isl -mllvm -polly-acc-check -mllvm -polly-run-inliner "
-        "-mllvm -enable-loop-simplifycfg=true -mllvm -enable-load-pre=true"
+        "-mllvm -polly-run-inliner"
     )
 
     env_base = (
@@ -47,7 +46,7 @@ if choice == "y":
         f"export COMMON='{common_flags}'; "
     )
 
-    # Phase 1: PGO Build
+    # PHASE 1 — PGO BUILD
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data "
         "-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
@@ -63,7 +62,7 @@ if choice == "y":
 
     os.environ["PATH"] = "/tmp/qemu-pgo-install/usr/local/bin:" + os.environ["PATH"]
 
-    # Merge PGO profile
+    # MERGE PGO DATA
     profdir = "/tmp/qemu-pgo-data"
     if os.path.isdir(profdir):
         profraws = " ".join(
@@ -76,7 +75,7 @@ if choice == "y":
 
     os.chdir("/tmp/qemu-src/build")
 
-    # Phase 2: Final LTO + PGO build
+    # PHASE 2 — FINAL LTO + PGO BUILD
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction "
         "-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
@@ -91,7 +90,7 @@ if choice == "y":
         "make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-pgo")
 
-    # BOLT Optimize
+    # BOLT
     qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
     if os.path.exists(qemu_bin):
         run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
