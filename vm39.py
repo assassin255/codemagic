@@ -30,7 +30,6 @@ if choice == "y":
     os.makedirs("/tmp/qemu-src/build", exist_ok=True)
     os.chdir("/tmp/qemu-src/build")
 
-    # BASE ENV
     env_base = (
         "export CC=clang-15; "
         "export CXX=clang++-15; "
@@ -45,9 +44,6 @@ if choice == "y":
         "'; "
     )
 
-    # ========================
-    # 1) BUILD PGO GENERATE
-    # ========================
     run(
         env_base +
         "export CFLAGS=\"$COMMON -fno-pie -fno-pic "
@@ -62,14 +58,13 @@ if choice == "y":
         "--enable-jump-tables "
         "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
-        f"--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
-        f"-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
+        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
+        "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
 
     run("make -j$(nproc)")
     run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
-    # Merging PGO
     profdir = "/tmp/qemu-pgo-data"
     if os.path.isdir(profdir):
         profraws = " ".join(
@@ -79,9 +74,6 @@ if choice == "y":
         if profraws:
             run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
-    # ========================
-    # 2) BUILD PGO USE
-    # ========================
     os.chdir("/tmp/qemu-src/build")
     run(
         env_base +
@@ -98,16 +90,13 @@ if choice == "y":
         "--enable-jump-tables "
         "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
-        f"--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
-        f"-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
+        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
+        "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
     )
 
     run("make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-pgo")
 
-    # ========================
-    # 3) BOLT Optimize
-    # ========================
     qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
     if os.path.exists(qemu_bin) and subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
         run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
@@ -119,15 +108,9 @@ if choice == "y":
         )
         run(f"sudo mv -f {qemu_bin}.bolt {qemu_bin}")
 
-    # Cleanup temp
     run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
 
     run("qemu-system-x86_64 --version")
-
-
-# ==========================
-#    DOWNLOAD & RUN VM
-# ==========================
 
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI")
