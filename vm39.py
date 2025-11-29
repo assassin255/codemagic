@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-
+#1
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -44,6 +44,7 @@ if choice == "y":
         "'; "
     )
 
+    # BUILD PGO GENERATE
     run(
         env_base +
         "export CFLAGS=\"$COMMON -fno-pie -fno-pic "
@@ -55,7 +56,6 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--enable-jump-tables "
         "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
@@ -74,6 +74,7 @@ if choice == "y":
         if profraws:
             run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
+    # BUILD PGO USE
     os.chdir("/tmp/qemu-src/build")
     run(
         env_base +
@@ -87,7 +88,6 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--enable-jump-tables "
         "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
@@ -112,6 +112,7 @@ if choice == "y":
 
     run("qemu-system-x86_64 --version")
 
+# DOWNLOAD & RUN VM
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI")
 print("=====================\n")
