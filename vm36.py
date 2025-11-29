@@ -45,7 +45,7 @@ if choice == "y":
 
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data "
-        "-DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
+        "-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
         "export CXXFLAGS=\"$CFLAGS\"; "
         "export LDFLAGS='-flto -Wl,-O3'; "
         "../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk "
@@ -76,7 +76,7 @@ if choice == "y":
     os.chdir("/tmp/qemu-src/build")
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction "
-        "-DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
+        "-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
         "export CXXFLAGS=\"$CFLAGS\"; "
         "export LDFLAGS='-flto -Wl,-O3'; "
         "make -j$(nproc) clean; "
