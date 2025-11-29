@@ -10,6 +10,7 @@ def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
 
+# =====0= BUILD QEMU 10.1.2 WITH PGO + BOLT + POLLY ======
 choice = ask("👉 Bạn có muốn build QEMU 10.1.2 từ source với PGO + BOLT + Polly không? (y/n): ", "n")
 
 if choice == "y":
@@ -42,6 +43,7 @@ if choice == "y":
             "-fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables'"
         )
 
+        # ===== STAGE A: PGO generate =====
         run(env_base + " && "
             "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data -DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\" && "
             "export CXXFLAGS=\"$CFLAGS\" && "
@@ -51,6 +53,7 @@ if choice == "y":
             "make -j$(nproc) && sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
         os.environ["PATH"] = "/tmp/qemu-pgo-install/usr/local/bin:" + os.environ["PATH"]
+
         workload_cmds = [
             "qemu-system-x86_64 --version",
             "qemu-img --version",
@@ -65,6 +68,7 @@ if choice == "y":
             if profraws:
                 run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
+        # ===== STAGE B: PGO use =====
         os.chdir("/tmp/qemu-src/build")
         run(env_base + " && "
             "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction -DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\" && "
@@ -73,7 +77,7 @@ if choice == "y":
             "make -j$(nproc) clean && "
             "../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
             "--enable-plugins --enable-lto --enable-coroutine-pool --disable-werror --disable-debug-info --disable-malloc-trim && "
-            "make -j$(nproc) && sudo make install PREFIX=/opt/qemu-pgo")
+            "make -j$(nproc) && sudo make install PREFIX=/opt/qemu-pgo")  # ✅ fix khoảng trắng PREFIX
 
         qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
         if subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
@@ -86,6 +90,7 @@ if choice == "y":
         run("deactivate || true")
         run("qemu-system-x86_64 --version")
 
+# ===== CHỌN WINDOWS =====
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI 💻")
 print("=====================\n")
