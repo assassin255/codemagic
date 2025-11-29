@@ -10,8 +10,20 @@ def ask(prompt, default="n"):
     ans = input(prompt).strip()
     return ans.lower() if ans else default.lower()
 
-choice = ask("👉 Build QEMU 10.1.2 với PGO + BOLT + POLLY + FULL LTO không? (y/n): ", "n")
+QEMU_BIN = "/opt/qemu-pgo/bin/qemu-system-x86_64"
 
+# ================================================
+#  CHECK QEMU EXISTS –> SKIP BUILD
+# ================================================
+if os.path.exists(QEMU_BIN):
+    print("✅ QEMU PGO+BOLT đã tồn tại, bỏ qua bước build!")
+    choice = "n"
+else:
+    choice = ask("👉 Build QEMU 10.1.2 với PGO + BOLT + POLLY + FULL LTO không? (y/n): ", "n")
+
+# ================================================
+#  BUILD QEMU
+# ================================================
 if choice == "y":
     run("sudo apt update -y")
     run("sudo apt install -y build-essential clang-15 lld-15 git ninja-build python3-venv python3-pip "
@@ -35,33 +47,31 @@ if choice == "y":
         "export CXX=clang++-15; "
         "export LD=lld-15; "
         "export COMMON='"
-        "-O3 -march=native -mtune=native -pipe -flto "
+        "-O3 -march=native -mtune=native -pipe -flto=thin "
         "-funroll-loops -fomit-frame-pointer -fno-semantic-interposition "
         "-fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables "
+        "-fmerge-all-constants -fvectorize-aggressive "
         "-mllvm -polly -mllvm -polly-vectorizer=stripmine "
         "-mllvm -polly-ast-use-context -mllvm -polly-run-inliner"
         "'; "
     )
 
+    # ============================================
+    # PGO PASS 1 — GENERATE
+    # ============================================
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-generate=/tmp/qemu-pgo-data "
-        "-DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
+        "-DDEFAULT_TCG_TB_SIZE=65536 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
         "export CXXFLAGS=\"$CFLAGS\"; "
         "export LDFLAGS='-flto -Wl,-O3'; "
         "../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk "
         "--enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool "
         "--disable-werror --disable-debug-info --disable-malloc-trim "
-        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0'")
+        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=65536 -DTCG_TARGET_HAS_MEMORY_BARRIER=0'")
     run("make -j$(nproc)")
     run("sudo make install DESTDIR=/tmp/qemu-pgo-install || sudo make install")
 
     os.environ["PATH"] = "/tmp/qemu-pgo-install/usr/local/bin:" + os.environ["PATH"]
-    for cmd in [
-        "qemu-system-x86_64 --version",
-        "qemu-img --version",
-        "qemu-system-x86_64 -h | head -n 5"
-    ]:
-        run(cmd)
 
     profdir = "/tmp/qemu-pgo-data"
     if os.path.isdir(profdir):
@@ -73,31 +83,41 @@ if choice == "y":
         if profraws:
             run(f"llvm-profdata merge -output=/tmp/qemu_pgo.profdata {profraws}")
 
+    # ============================================
+    # PGO PASS 2 — USE
+    # ============================================
     os.chdir("/tmp/qemu-src/build")
     run(env_base +
         "export CFLAGS=\"$COMMON -fprofile-use=/tmp/qemu_pgo.profdata -fprofile-correction "
-        "-DDEFAULT_TCG_TB_SIZE=4096 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
+        "-DDEFAULT_TCG_TB_SIZE=65536 -DTCG_TARGET_HAS_MEMORY_BARRIER=0\"; "
         "export CXXFLAGS=\"$CFLAGS\"; "
         "export LDFLAGS='-flto -Wl,-O3'; "
         "make -j$(nproc) clean; "
         "../configure --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk "
         "--enable-sdl --enable-spice --enable-plugins --enable-lto --enable-coroutine-pool "
         "--disable-werror --disable-debug-info --disable-malloc-trim "
-        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0'; "
+        "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=65536 -DTCG_TARGET_HAS_MEMORY_BARRIER=0'; "
         "make -j$(nproc)")
     run("sudo make install PREFIX=/opt/qemu-pgo")
 
+    # ============================================
+    # BOLT OPTIMIZATION
+    # ============================================
     qemu_bin = "/opt/qemu-pgo/bin/qemu-system-x86_64"
     if os.path.exists(qemu_bin) and subprocess.run("command -v llvm-bolt", shell=True).returncode == 0:
         run(f"sudo cp {qemu_bin} {qemu_bin}.orig")
         run(f"sudo llvm-bolt {qemu_bin}.orig -o {qemu_bin}.bolt "
             "--reorder-blocks=cache+ --reorder-functions=hotcold+ "
-            "--split-functions --data-refs --dedup-strings --symbolic")
+            "--split-functions --data-refs --dedup-strings --symbolic "
+            "--icf=all --frame-opt --peepholes --simplify-roots")
         run(f"sudo mv -f {qemu_bin}.bolt {qemu_bin}")
 
     run("rm -rf /tmp/qemu-pgo-data /tmp/qemu_pgo.profdata /tmp/qemu-pgo-install /tmp/qemu-src")
     run("qemu-system-x86_64 --version")
 
+# ================================================
+#  VM SELECTION + STARTUP
+# ================================================
 print("\n=====================")
 print("    CHỌN WINDOWS MUỐN TẢI")
 print("=====================\n")
@@ -111,6 +131,7 @@ urls = {
     "2": ("Windows2016", "https://drive.muavps.net/file/Windows2016.img"),
     "3": ("Windows2022", "https://drive.muavps.net/file/Windows2022.img")
 }
+
 WIN_NAME, WIN_URL = urls.get(win_choice, urls["1"])
 print(f"💾 File VM: {WIN_NAME}")
 
@@ -131,7 +152,7 @@ start_cmd = f"""qemu-system-x86_64 \
 -cpu max,model-id="{cpu_host}" \
 -smp {cpu_core} \
 -m {ram_size}G \
--accel tcg,thread=multi,tb-size=16384,split-wx=off \
+-accel tcg,thread=multi,tb-size=65536,split-wx=off \
 -object iothread,id=io1 \
 -drive file=win.img,if=none,id=drive0,cache=writeback,aio=threads,discard=on,format=raw \
 -device virtio-blk-pci,drive=drive0,iothread=io1 \
