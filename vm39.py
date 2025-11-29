@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-#1
+
 def run(cmd):
     subprocess.run(cmd, shell=True, check=False)
 
@@ -56,7 +56,7 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
+        "--disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
@@ -88,7 +88,7 @@ if choice == "y":
         "--target-list=x86_64-softmmu "
         "--enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice "
         "--enable-plugins --enable-lto --enable-coroutine-pool "
-        "--disable-assert --disable-debug --disable-debug-info --disable-malloc-trim "
+        "--disable-debug --disable-debug-info --disable-malloc-trim "
         "--use-gnu-eh-frame-hdr "
         "--extra-cflags='-DDEFAULT_TCG_TB_SIZE=16384 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 "
         "-DTCG_ACCEL_FAST=1 -DTCG_OVERSIZED_OP=1 -DQEMU_STRICT_ALIGN=0' "
