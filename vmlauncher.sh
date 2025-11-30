@@ -11,64 +11,71 @@ ask() {
     fi
 }
 
-run() {
-    bash -c "$1"
-}
-
-choice=$(ask "👉 Bạn có muốn build QEMU 10.1.2 từ source với tối ưu không? (y/n): " "n")
+choice=$(ask "👉 Bạn có muốn build QEMU 10.1.2 từ source với tối ưu ULTRA không? (y/n): " "n")
 
 if [[ "$choice" == "y" ]]; then
     if command -v qemu-system-x86_64 >/dev/null 2>&1; then
         echo "⚡ QEMU đã cài sẵn, bỏ qua build."
     else
-        echo "🚀 Build QEMU 10.1.2 + Optimized Flags"
-
-        sudo apt update -y && sudo apt install -y wget gnupg lsb-release software-properties-common
-        wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && sudo ./llvm.sh 18
-        sudo apt update -y && sudo apt install -y clang-18 lld-18 llvm-18-dev llvm-18-tools build-essential git ninja-build python3-venv \
-            libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev \
+        echo "🚀 Build QEMU 10.1.2 + ULTRA-Optimized Flags"
+        sudo apt update -y
+        sudo apt install -y wget gnupg lsb-release software-properties-common
+        wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+        chmod +x /tmp/llvm.sh
+        sudo /tmp/llvm.sh 18
+        sudo apt update -y
+        sudo apt install -y clang-18 lld-18 llvm-18-dev llvm-18-tools build-essential git ninja-build python3-venv \
+            libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev \
+            libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev \
             libspice-server-dev libspice-protocol-dev python3-pip aria2
-
         export PATH="/usr/lib/llvm-18/bin:$PATH"
         python3 -m venv ~/qemu-env
         source ~/qemu-env/bin/activate
         pip install --upgrade pip tomli markdown packaging || true
-
         rm -rf /tmp/qemu-src
         git clone --depth 1 --branch v10.1.2 https://gitlab.com/qemu-project/qemu.git /tmp/qemu-src
         mkdir -p /tmp/qemu-src/build
         cd /tmp/qemu-src/build
-
         export CC=clang-18
         export CXX=clang++-18
         export LD=lld-18
-        export EXTRA_CFLAGS="-Ofast -ffast-math -march=native -mtune=native -pipe -flto=full -fomit-frame-pointer \
--fno-semantic-interposition -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables -fno-unwind-tables -fno-stack-protector \
--ffp-contract=fast -fno-trapping-math -fno-math-errno -funroll-loops -finline-functions -fvectorize -fprefetch-loop-arrays \
--mllvm -polly -mllvm -polly-vectorizer=superword"
+        export EXTRA_CFLAGS="-DDEFAULT_TCG_TB_SIZE=1048576 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 -DTCG_ACCEL_FAST=1 \
+-DTCG_OVERSIZED_OP=1 -DTCG_ENABLE_FAST_PREFETCH=1 -DQEMU_STRICT_ALIGN=0 \
+-Ofast -ffast-math -march=native -mtune=native -pipe -flto=full -fuse-ld=lld \
+-fno-semantic-interposition -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables \
+-fno-unwind-tables -fno-stack-protector -fno-plt -fno-pic -fno-pie -fno-common \
+-ffp-contract=fast -fno-trapping-math -fno-math-errno -fno-signed-zeros \
+-fno-rounding-math -fno-signaling-nans -freciprocal-math -funroll-loops \
+-finline-functions -finline-limit=1000000 -fmerge-all-constants -fvectorize \
+-fprefetch-loop-arrays -fmodulo-sched -fmodulo-sched-allow-regmoves \
+-faggressive-loop-coalescing -fipa-cp -fpredictive-commoning -falign-functions=32 \
+-falign-loops=32 -falign-jumps=32 -mllvm -polly -mllvm -polly-vectorizer=superword \
+-mllvm -polly-ast-use -mllvm -polly-slp-vectorizer -mllvm -polly-code-gen \
+-mllvm -polly-prevectorize -mllvm -enable-indvars -mllvm -enable-loop-simplify \
+-mllvm -enable-fusion -mllvm -polly-fusion-max -mllvm -polly-opt-fusion \
+-mllvm -polly-intra-scop-simplify -Wno-error -Wno-unused-command-line-argument \
+-Wno-overriding-option"
         export CFLAGS="$EXTRA_CFLAGS"
         export CXXFLAGS="$EXTRA_CFLAGS"
-        export LDFLAGS="-flto=full -Wl,--lto-O3 -Wl,--icf=all -Wl,--gc-sections"
-
+        export LDFLAGS="-flto=full -Wl,--lto-O3 -Wl,--icf=all -Wl,--lto-partitions=1 -Wl,--gc-sections"
         ../configure --prefix=/opt/qemu-optimized --target-list=x86_64-softmmu \
-            --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-lto --enable-coroutine-pool \
-            --disable-debug-info --disable-malloc-trim --disable-plugins --disable-docs --disable-werror --disable-fdt \
+            --enable-tcg --enable-slirp --enable-gtk --enable-sdl \
+            --enable-spice --enable-lto --enable-coroutine-pool \
+            --disable-debug-info --disable-malloc-trim --disable-plugins \
+            --disable-docs --disable-werror --disable-fdt \
             CC="$CC" CXX="$CXX" LD="$LD" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"
-
         ninja -j"$(nproc)" && sudo ninja install
         rm -rf /tmp/qemu-src
         deactivate
-
         if ! grep -q "/opt/qemu-optimized/bin" ~/.bashrc 2>/dev/null; then
             echo 'export PATH="/opt/qemu-optimized/bin:$PATH"' >> ~/.bashrc
         fi
         export PATH="/opt/qemu-optimized/bin:$PATH"
-
         if [[ -f ~/.zshrc ]]; then
             echo 'export PATH="/opt/qemu-optimized/bin:$PATH"' >> ~/.zshrc
         fi
-
-        echo "✅ QEMU 10.1.2 built successfully!"
+        qemu-system-x86_64 --version
+        echo "✅ ULTRA -OFast + LTO + fast-math build finished at /opt/qemu-optimized"
     fi
 else
     echo "⚡ Bỏ qua build QEMU."
@@ -80,45 +87,39 @@ echo "1️⃣ Windows Server 2012 R2"
 echo "2️⃣ Windows Server 2016"
 echo "3️⃣ Windows Server 2022"
 read -rp "👉 Nhập số [1-3]: " win_choice
-
 case "$win_choice" in
     1) WIN_NAME="Windows2012"; WIN_URL="https://drive.muavps.net/file/Windows2012.img" ;;
     2) WIN_NAME="Windows2016"; WIN_URL="http://drive.muavps.net/file/Windows2016.img" ;;
     3) WIN_NAME="Windows2022"; WIN_URL="https://drive.muavps.net/file/Windows2022.img" ;;
     *) WIN_NAME="Windows2012"; WIN_URL="https://drive.muavps.net/file/Windows2012.img" ;;
 esac
-
 echo "💾 File VM: $WIN_NAME"
-
 if [[ -f "win.img" ]]; then
     echo "✔ win.img đã tồn tại — skip tải."
 else
     echo "⬇ Tải bằng aria2c..."
     aria2c -x16 -s16 --continue --file-allocation=none "$WIN_URL" -o win.img
 fi
-
 read -rp "📦 Mở rộng đĩa thêm bao nhiêu GB (default 20)? " extra_gb
 extra_gb="${extra_gb:-20}"
 qemu-img resize win.img "+${extra_gb}G"
 echo "🔧 Đĩa đã mở rộng thêm $extra_gb GB."
-
 cpu_host=$(grep -m1 "model name" /proc/cpuinfo | sed 's/^.*: //')
 echo "🧠 CPU host detected: $cpu_host"
 cpu_model="max,model-id=\"$cpu_host\""
-
 read -rp "⚙ CPU core (default 2): " cpu_core
 cpu_core="${cpu_core:-2}"
-
 read -rp "💾 RAM GB (default 4): " ram_size
 ram_size="${ram_size:-4}"
 
 echo "💻 Khởi động VM..."
 
-start_cmd="qemu-system-x86_64 \
+run_vm() {
+    qemu-system-x86_64 \
     -machine type=q35 \
-    -cpu $cpu_model \
-    -smp $cpu_core \
-    -m ${ram_size}G \
+    -cpu "$cpu_model" \
+    -smp "$cpu_core" \
+    -m "${ram_size}G" \
     -accel tcg,thread=multi,tb-size=1048576,split-wx=off \
     -object iothread,id=io1 \
     -drive file=win.img,if=none,id=drive0,cache=unsafe,aio=threads,discard=on,format=raw \
@@ -131,14 +132,14 @@ start_cmd="qemu-system-x86_64 \
     -device virtio-net-pci,netdev=n0 \
     -display vnc=:0 \
     -boot order=c,menu=on \
-    -name \"$WIN_NAME VM\" \
+    -name "${WIN_NAME} VM" \
     -daemonize \
-    > /dev/null 2>&1"
+    > /dev/null 2>&1
+}
 
-eval "$start_cmd"
-
+run_vm
+sleep 3
 use_rdp=$(ask "🛰️ Có muốn dùng RDP để kết nối đến VM không? (y/n): " "n")
-
 if [[ "$use_rdp" == "y" ]]; then
     wget -q https://github.com/kami2k1/tunnel/releases/latest/download/kami-tunnel-linux-amd64.tar.gz
     tar -xzf kami-tunnel-linux-amd64.tar.gz
@@ -157,5 +158,4 @@ if [[ "$use_rdp" == "y" ]]; then
 else
     echo "❌ Bỏ qua tunnel RDP."
 fi
-
-echo "✅ VM đã chạy với lệnh tối ưu!"
+echo "🎉 VM sẵn sàng!"
