@@ -68,7 +68,7 @@ echo "🔧 Đĩa đã mở rộng thêm $extra_gb GB."
 
 cpu_host=$(grep -m1 "model name" /proc/cpuinfo | sed 's/^.*: //')
 echo "🧠 CPU host detected: $cpu_host"
-cpu_model="max,model-id=\"$cpu_host\""
+cpu_model="max,model-id='${cpu_host}'"
 read -rp "⚙ CPU core (default 2): " cpu_core
 cpu_core="${cpu_core:-2}"
 read -rp "💾 RAM GB (default 4): " ram_size
