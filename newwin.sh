@@ -21,7 +21,7 @@ EXTRA_CFLAGS="-DDEFAULT_TCG_TB_SIZE=33554432 -DTCG_TARGET_HAS_MEMORY_BARRIER=0 -
 
 LDFLAGS="-flto=full -Wl,--lto-O3 -Wl,--icf=all -Wl,--lto-partitions=1 -Wl,--gc-sections -Wl,--plugin-opt=also-emit-llvm"
 
-../configure --prefix=/opt/qemu-optimized --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-lto --enable-coroutine-pool --enable-mttcg --disable-debug-info --disable-malloc-trim --disable-plugins --disable-docs --disable-werror CC="$CC" CXX="$CXX" LD="$LD" CFLAGS="$EXTRA_CFLAGS" CXXFLAGS="$EXTRA_CFLAGS" LDFLAGS="$LDFLAGS"
+../configure --prefix=/opt/qemu-optimized --target-list=x86_64-softmmu --enable-tcg --enable-slirp --enable-gtk --enable-sdl --enable-spice --enable-lto --enable-coroutine-pool --disable-debug-info --disable-malloc-trim --disable-plugins --disable-docs --disable-werror CC="$CC" CXX="$CXX" LD="$LD" CFLAGS="$EXTRA_CFLAGS" CXXFLAGS="$EXTRA_CFLAGS" LDFLAGS="$LDFLAGS"
 
 ninja -j"$(nproc)" && sudo ninja install
 
