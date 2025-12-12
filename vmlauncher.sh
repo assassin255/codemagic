@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#1
+set -e
 
 ask() {
     read -rp "$1" ans
@@ -19,7 +19,7 @@ if [[ "$choice" == "y" ]]; then
     else
         echo "🚀 Build QEMU 10.2.0-rc3 + LLVM21 ULTRA-Optimized"
         sudo apt update -y
-        sudo apt install -y wget gnupg lsb-release software-properties-common build-essential ninja-build git python3 python3-venv python3-pip libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev libspice-server-dev libspice-protocol-dev pkg-config meson
+        sudo apt install -y wget gnupg lsb-release software-properties-common build-essential ninja-build git python3 python3-venv python3-pip libglib2.0-dev libpixman-1-dev zlib1g-dev libfdt-dev libslirp-dev libusb-1.0-0-dev libgtk-3-dev libsdl2-dev libsdl2-image-dev libspice-server-dev libspice-protocol-dev pkg-config meson aria2
 
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main"
